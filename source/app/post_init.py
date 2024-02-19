@@ -156,7 +156,7 @@ def run_post_init(development=False):
             alembic_cfg = Config(file_='app/alembic.ini')
             db_uri = app.config['SQLALCHEMY_DATABASE_URI'].replace('%', '%%')  # Escaping % character
             alembic_cfg.set_main_option('sqlalchemy.url', db_uri)
-            command.upgrade(alembic_cfg, 'head')
+            #command.upgrade(alembic_cfg, 'head')   #NOTE: Break things with neon.tec database
 
             # Create base server settings if they don't exist
             srv_settings = ServerSettings.query.first()
