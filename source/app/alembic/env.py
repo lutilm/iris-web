@@ -14,9 +14,10 @@ fileConfig(config.config_file_name)
 import os
 os.environ["ALEMBIC"] = "1"
 
-from app.configuration import SQLALCHEMY_BASE_ADMIN_URI, PG_DB_
+from app.configuration import SQLALCHEMY_BASE_ADMIN_URI, PG_DB_, PG_OPTIONS_
 
-config.set_main_option('sqlalchemy.url', SQLALCHEMY_BASE_ADMIN_URI + PG_DB_)
+db_uri = SQLALCHEMY_BASE_ADMIN_URI + PG_DB_ + PG_OPTIONS_.replace('%', '%%')
+config.set_main_option('sqlalchemy.url', db_uri)
 
 # add your model's MetaData object here
 # for 'autogenerate' support

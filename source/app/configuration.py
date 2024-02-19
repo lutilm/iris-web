@@ -172,6 +172,7 @@ PGA_PASSWD_ = config.load('POSTGRES', 'ADMIN_PASSWORD')
 PG_SERVER_ = config.load('POSTGRES', 'SERVER')
 PG_PORT_ = config.load('POSTGRES', 'PORT')
 PG_DB_ = config.load('POSTGRES', 'DB', fallback='iris_db')
+PG_OPTIONS_ = config.load('POSTGRES', 'OPTIONS', fallback='')
 CELERY_BROKER_ = config.load('CELERY', 'BROKER',
                              fallback=f"amqp://{config.load('CELERY', 'HOST', fallback='rabbitmq')}")
 
@@ -301,6 +302,7 @@ class Config:
     PG_SERVER = PG_SERVER_
     PG_PORT = PG_PORT_
     PG_DB = PG_DB_
+    PG_OPTIONS = PG_OPTIONS_
 
     DB_RETRY_COUNT = config.load('DB', 'RETRY_COUNT', fallback=3)
     DB_RETRY_DELAY = config.load('DB', 'RETRY_DELAY', fallback=0.5)
@@ -318,9 +320,9 @@ class Config:
     """
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
-    SQLALCHEMY_DATABASE_URI = SQLALCHEMY_BASE_URI + PG_DB_
+    SQLALCHEMY_DATABASE_URI = SQLALCHEMY_BASE_URI + PG_DB_ + PG_OPTIONS
     SQLALCHEMY_BINDS = {
-        'iris_tasks': SQLALCHEMY_BASE_URI + 'iris_tasks'
+        'iris_tasks': SQLALCHEMY_BASE_URI + 'iris_tasks'+ PG_OPTIONS
     }
 
     SQALCHEMY_PIGGER_URI = SQLALCHEMY_BASE_URI

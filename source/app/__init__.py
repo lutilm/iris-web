@@ -98,9 +98,10 @@ app.config.from_object('app.configuration.Config')
 cache = Cache(app)
 
 SQLALCHEMY_ENGINE_OPTIONS = {
-    "json_deserializer": partial(json.loads, object_pairs_hook=collections.OrderedDict)
+    "json_deserializer": partial(json.loads, object_pairs_hook=collections.OrderedDict),
+    "connect_args": {}
 }
-
+SQLALCHEMY_ENGINE_OPTIONS["connect_args"]["sslmode"] = "require"
 db = SQLAlchemy(app, engine_options=SQLALCHEMY_ENGINE_OPTIONS)  # flask-sqlalchemy
 
 bc = Bcrypt(app)  # flask-bcrypt

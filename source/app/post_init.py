@@ -154,7 +154,8 @@ def run_post_init(development=False):
             log.info("Running DB migration")
 
             alembic_cfg = Config(file_='app/alembic.ini')
-            alembic_cfg.set_main_option('sqlalchemy.url', app.config['SQLALCHEMY_DATABASE_URI'])
+            db_uri = app.config['SQLALCHEMY_DATABASE_URI'].replace('%', '%%')  # Escaping % character
+            alembic_cfg.set_main_option('sqlalchemy.url', db_uri)
             command.upgrade(alembic_cfg, 'head')
 
             # Create base server settings if they don't exist
@@ -286,8 +287,7 @@ def create_safe_db(db_name):
         db_name: A string representing the name of the database to create.
     """
     # Create a new engine object for the specified database
-    engine = create_engine(app.config["SQALCHEMY_PIGGER_URI"] + db_name)
-
+    engine = create_engine(app.config["SQALCHEMY_PIGGER_URI"] + db_name + app.config["PG_OPTIONS"] )
     # Check if the database already exists
     if not database_exists(engine.url):
         # If the database does not exist, create it
