@@ -21,6 +21,7 @@ def get_server_settings_as_dict():
 
 
 def get_alembic_revision():
+    return None  #NOTE: Alambic breask with neontec
     with db.engine.connect() as con:
         version_num = con.execute(text("SELECT version_num FROM alembic_version")).first()[0]
     return version_num or None
