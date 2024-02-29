@@ -5,8 +5,12 @@ import * as dotenv from 'dotenv'
 import argparse from 'argparse';
 import fs from 'fs';
 import zlib from 'zlib';
+import https from 'https';
 
-
+const httpsAgent = new https.Agent({
+    rejectUnauthorized: false, // WARNING: This bypasses SSL certificate validation. Use with caution.
+  });
+  
 //
 // INIT
 //
@@ -184,6 +188,7 @@ async function sendAlertToIris(title, text, source, options){
     try{
         const response = await fetch(`${IRIS_BASEURL}alerts/add`,{
                 method:'POST',
+                agent: httpsAgent,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${IRIS_API_KEY}` 
