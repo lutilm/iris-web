@@ -3,7 +3,11 @@ import fetch from 'node-fetch';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import { ArgumentParser } from 'argparse';
+import https from 'https';
 
+const httpsAgent = new https.Agent({
+    rejectUnauthorized: false, // WARNING: This bypasses SSL certificate validation. Use with caution.
+  });
 /*
 Add the following snippet into the /var/ossec/etc/ossec.conf config file:
 
@@ -11,7 +15,7 @@ Add the following snippet into the /var/ossec/etc/ossec.conf config file:
 
 <!-- IRIS integration -->
 <integration>
-  <name>custom-iris.py</name>
+  <name>wazuh.mjs</name>
   <hook_url>http://IRIS-BASE-URL/alerts/add</hook_url>
   <level>7</level>
   <api_key>APIKEY</api_key>
@@ -90,6 +94,7 @@ async function processAlert(alertFile, apiKey, baseUrl, irisCustomerId) {
 
     const response = await fetch( `${baseUrl??IRIS_BASEURL}alerts/add`, {
         method: 'POST',
+        agent: httpsAgent,
         headers: {
             "Authorization": `Bearer ${apiKey??IRIS_API_KEY}`,
             "Content-Type": "application/json"
