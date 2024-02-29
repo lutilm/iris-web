@@ -272,6 +272,7 @@ function summarizeJSON(data){
         sha256: behavior.sha256,
         cmdline: behavior.cmdline
     })),  
+    rawdata:data,
 };
  return simplifiedData;
 }
@@ -284,7 +285,6 @@ Tactics: ${data.tactics}
 
 # Hosts Involved:
 ${data.hosts.map(host => `  Hostname: ${host.hostname}, IP: ${host.externalIp}, User: ${host.lastLoginUser}, Status: ${host.status}`).join('\n')}
-
 # Behaviors Evidence:
 ${data.behaviors.map(behavior => `  Date: ${behavior.dateOfEvidence}, User: ${behavior.userName}, Tactic ID: ${behavior.tacticId}, SHA-256: ${behavior.sha256}, Command Line: ${behavior.cmdline}`).join('\n')}
 `;
@@ -334,7 +334,7 @@ for (let i=0;i<s_inc.length;i++){
     cacheSave(s_inc[i].incident_id,s_inc[i])
     console.log(`[+] pushing alert for incident (${_title})`)
     if (!args.dryRun){ 
-        await sendAlertToIris(_title, _text, _SOURCE, { date:_date, severity:'medium', assets:_assets ,tags:_TAGS});
+        await sendAlertToIris(_title, _text, _SOURCE, { date:_date, severity:'medium', assets:_assets ,tags:_TAGS, content:s_inc[i].rawdata});
     } else{
         console.log(`[-] incident raw data:`,s_inc[i])        
     }
