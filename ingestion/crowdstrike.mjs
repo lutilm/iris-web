@@ -234,7 +234,7 @@ async function cacheSave(key,data){
         writeStream.on('finish', () => {  resolve(true); });
         writeStream.on('error', (err) => { console.error(`[!] Error caching ${key}`,err);  resolve(false); });
         
-        gzip.write(data);
+        gzip.write(JSON.stringify(data));
         gzip.pipe(writeStream);
         gzip.end();
     });
@@ -247,25 +247,26 @@ async function cacheSave(key,data){
 
 function summarizeJSON(data){
     const simplifiedData = {
-  dateOfIncident: data.created,
-  status: data.state,
-  tactics: data.tactics.join(', '),
-  objectives: data.objectives.join(', '),
-  usersInvolved: data.users,
-  hosts: data.hosts.map(host => ({
-    deviceId: host.device_id,
-    externalIp: host.external_ip,
-    hostname: host.hostname,
-    lastLoginUser: host.last_login_user,
-    status: host.status
-  })),
-  behaviors: data.behaviors.map(behavior => ({
-    dateOfEvidence: behavior.timestamp,
-    userName: behavior.user_name,
-    tacticId: behavior.tactic_id,
-    sha256: behavior.sha256,
-    cmdline: behavior.cmdline
-  })),  
+    incident_id:data.incident_id,
+    dateOfIncident: data.created,
+    status: data.state,
+    tactics: data.tactics.join(', '),
+    objectives: data.objectives.join(', '),
+    usersInvolved: data.users,
+    hosts: data.hosts.map(host => ({
+        deviceId: host.device_id,
+        externalIp: host.external_ip,
+        hostname: host.hostname,
+        lastLoginUser: host.last_login_user,
+        status: host.status
+    })),
+    behaviors: data.behaviors.map(behavior => ({
+        dateOfEvidence: behavior.timestamp,
+        userName: behavior.user_name,
+        tacticId: behavior.tactic_id,
+        sha256: behavior.sha256,
+        cmdline: behavior.cmdline
+    })),  
 };
  return simplifiedData;
 }
@@ -325,6 +326,7 @@ for (let i=0;i<s_inc.length;i++){
     const _iocs=s_inc[i].behaviors.map(h=>{
         return { ioc_value: "", ioc_description: "", ioc_tlp_id: 1, ioc_type_id: 2, ioc_tags: "", ioc_enrichment: {}};
     });
+    cacheSave(s_inc[i].incident_id,s_inc[i])
     console.log(`[+] pushing alert for incident (${_title})`)
     if (!args.dryRun){ 
         await sendAlertToIris(_title, _text, _SOURCE, { date:_date, severity:'medium', assets:_assets ,tags:_TAGS});
