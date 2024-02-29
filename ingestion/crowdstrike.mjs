@@ -3,23 +3,29 @@ import querystring from 'querystring';
 import fetch from "node-fetch";
 import * as dotenv from 'dotenv'
 import argparse from 'argparse';
+import fs from 'fs';
+import zlib from 'zlib';
+
 
 //
 // INIT
 //
 dotenv.config()
 
+
 const parser = new argparse.ArgumentParser({
   description: 'Script to query incidents and behaviors from CrowdStrike and send alerts to IRIS.'
 });
 parser.add_argument('--tags', { help: 'Comma-separated list of tags', required: true,  default:'crowdstrike,endpoint' });
 parser.add_argument('--source', { help: 'Source of the alert', required: true, default:'crowdstrike' });
+parser.add_argument('--cacheFolder', { help: 'Folder to use as Cache', default:'crowdstrike' });
 parser.add_argument('--dryRun', { help: 'Run the script without sending alerts',  action: 'store_true' });
 parser.add_argument('--status', { help: 'Status of the incidents to query (e.g., "open", "closed")', required: true });
 
 const args = parser.parse_args();
 const _SOURCE = args.source;
 const _TAGS = args.tags;
+const _CACHE_FOLDER=args.cacheFolder ?? _SOURCE;
 
 const CROWDSTRIKE_CLIENT_ID = process.env.CROWDSTRIKE_CLIENT_ID
 const CROWDSTRIKE_CLIENT_SECRET = process.env.CROWDSTRIKE_CLIENT_SECRET
@@ -55,7 +61,7 @@ async function queryIncidents(filter, sort){
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${A_TOKEN}` 
-              },z
+              },
         });
         const data = await response.json();
         if (!response.ok) { console.log(`[!] Error: `,data?.errors); return null; }
@@ -124,11 +130,9 @@ async function getIncidentBehaviors(ids){
     }
 }
 
-
 //
-// CROWDSTRIKE API
+// IRIS API
 //
-
 
 async function sendAlertToIris(title, text, source, options){
 
@@ -194,6 +198,48 @@ async function sendAlertToIris(title, text, source, options){
 
 }
 
+//
+// CACHE
+//
+async function cacheGet(key){
+    if (!fs.existsSync(_CACHE_FOLDER)) { fs.mkdirSync(_CACHE_FOLDER); }
+    if (!fs.existsSync(`${_CACHE_FOLDER}/${key}`)){ return null; }
+
+    const gunzip = zlib.createGunzip();
+    const readStream = fs.createReadStream(`${_CACHE_FOLDER}/${key}`);
+    const chunks = [];
+    return new Promise((resolve,reject)=>{
+        readStream
+        .pipe(gunzip)
+        .on('data', (chunk) => chunks.push(chunk))
+        .on('end', () => {
+            const content = Buffer.concat(chunks).toString();
+            try{
+                const jcontent=JSON.parse(content);
+                resolve(jcontent)
+            }catch (ex){
+                console.error(`[!] Error parsing cached event "${key}"`,ex);
+                resolve(null);
+            }
+        })
+      .on('error', (err) => { console.error('[!] An error occurred:', err); resolve(null);});
+    });
+}
+async function cacheSave(key,data){
+    if (!fs.existsSync(_CACHE_FOLDER)) { fs.mkdirSync(_CACHE_FOLDER); }
+
+    const gzip = zlib.createGzip();
+    const writeStream = fs.createWriteStream(`${_CACHE_FOLDER}/${key}`);
+    return new Promise((resolve, reject)=>{
+        writeStream.on('finish', () => {  resolve(true); });
+        writeStream.on('error', (err) => { console.error(`[!] Error caching ${key}`,err);  resolve(false); });
+        
+        gzip.write(data);
+        gzip.pipe(writeStream);
+        gzip.end();
+    });
+
+}
 
 //
 // MISC
@@ -248,6 +294,13 @@ ${data.behaviors.map(behavior => `  Date: ${behavior.dateOfEvidence}, User: ${be
 const A_TOKEN = await getToken();
 let inc_ids = await queryIncidents(`state:"${args.status??'open'}"`,'start|desc');
 if (!inc_ids||inc_ids.length==0){ console.log(`[+] no incidents retrieved`);process.exit(0);}
+
+for (let i=0;i<inc_ids.length;i++){
+    let key=inc_ids[i]
+    let cached=await cacheGet(key);
+    if (cached){ const idx=inc_ids.indexOf(key); inc_ids.splice(idx,1); }
+}
+
 
 let incidents=await getIncidents(inc_ids)
 let ib_ids=await queryIncidentBehaviors(`${incidents.map(i=>`incident_ids:"${i.incident_id}"`).join(',')} `)
