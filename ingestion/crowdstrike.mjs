@@ -109,13 +109,17 @@ let inc_ids = await queryIncidents('state:"closed"','start|desc');
 let incidents=await getIncidents(inc_ids)
 
 
-let ib_ids=await queryIncidentBehaviors(`incident_ids:"${incidents[0].incident_id}"`)
-
-//console.log(incidents[0],incidents[0].incident_id,ib_ids)
-
+let ib_ids=await queryIncidentBehaviors(`${incidents.map(i=>`incident_ids:"${i.incident_id}"`).join(',')} `)
 
 let ibs=await getIncidentBehaviors(ib_ids)
-console.log('incidents')
-console.log(incidents.map(x=>x.incident_id))
-console.log('behaviors')
-console.log(ibs.map(x=>(x.incident_ids)))
+//console.log('incidents')
+//console.log(incidents.map(x=>x.incident_id))
+//console.log('behaviors')
+//console.log(ibs.map(x=>(x.incident_ids)))
+
+incidents.forEach(incident=>{
+    incident.behaviors=[];
+    ibs.forEach(ib=>{ if ( ib.incident_ids.indexOf(incident.incident_id)!=-1){ incident.behaviors.push(ib); } })
+});
+
+console.log(JSON.stringify(incidents))
