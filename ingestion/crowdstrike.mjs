@@ -55,7 +55,7 @@ async function queryIncidents(filter, sort){
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${A_TOKEN}` 
-              },
+              },z
         });
         const data = await response.json();
         if (!response.ok) { console.log(`[!] Error: `,data?.errors); return null; }
@@ -136,7 +136,7 @@ async function sendAlertToIris(title, text, source, options){
     switch (true) {
     case options?.severity && ( ('string'===typeof(options?.severity)&&options?.severity.toLowerCase().startsWith('l') ) || ('number'===typeof(options?.severity) && options?.severity<4 ) ):
         // low
-        severity_id=5;
+        severity_id=2;
         break;
     case options?.severity && ( ('string'===typeof(options?.severity)&&options?.severity.toLowerCase().startsWith('m') ) || ('number'===typeof(options?.severity) && options?.severity<7 ) ):
         // medium
@@ -144,11 +144,11 @@ async function sendAlertToIris(title, text, source, options){
         break;
     case options?.severity && ( ('string'===typeof(options?.severity)&&options?.severity.toLowerCase().startsWith('h') ) || ('number'===typeof(options?.severity) && options?.severity<10 ) ):
         // medium
-        severity_id=2;
+        severity_id=5;
         break;
     case options?.severity && ( ('string'===typeof(options?.severity)&&options?.severity.toLowerCase().startsWith('c') ) || ('number'===typeof(options?.severity) && options?.severity<10 ) ):
         // critical
-        severity_id=1;
+        severity_id=6;
         break;
     default:
         // medium
