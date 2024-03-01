@@ -1,12 +1,25 @@
 import { FalconClient, FalconErrorExplain } from "crowdstrike-falcon";
 import querystring from 'querystring';
 import fetch from "node-fetch";
-
 import * as dotenv from 'dotenv'
+import argparse from 'argparse';
+
+//
+// INIT
+//
 dotenv.config()
 
-const _SOURCE='CrowdStrike'
-const _TAG='endpoint,crowdstrike'
+const parser = new argparse.ArgumentParser({
+  description: 'Script to query incidents and behaviors from CrowdStrike and send alerts to IRIS.'
+});
+parser.add_argument('--tags', { help: 'Comma-separated list of tags', required: true,  default:'crowdstrike,endpoint' });
+parser.add_argument('--source', { help: 'Source of the alert', required: true, default:'crowdstrike' });
+parser.add_argument('--dryRun', { help: 'Run the script without sending alerts',  action: 'store_true' });
+parser.add_argument('--status', { help: 'Status of the incidents to query (e.g., "open", "closed")', required: true });
+
+const args = parser.parse_args();
+const _SOURCE = args.source;
+const _TAGS = args.tags;
 
 const CROWDSTRIKE_CLIENT_ID = process.env.CROWDSTRIKE_CLIENT_ID
 const CROWDSTRIKE_CLIENT_SECRET = process.env.CROWDSTRIKE_CLIENT_SECRET
@@ -43,7 +56,6 @@ async function queryIncidents(filter, sort){
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${A_TOKEN}` 
               },
-              //body: JSON.stringify(postData)
         });
         const data = await response.json();
         if (!response.ok) { console.log(`[!] Error: `,data?.errors); return null; }
@@ -83,7 +95,6 @@ async function queryIncidentBehaviors(filter, sort){
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${A_TOKEN}` 
               },
-              //body: JSON.stringify(postData)
         });
         const data = await response.json();
         if (!response.ok) { console.log(`[!] Error: `,data?.errors); return null; }
@@ -235,7 +246,9 @@ ${data.behaviors.map(behavior => `  Date: ${behavior.dateOfEvidence}, User: ${be
 //
 
 const A_TOKEN = await getToken();
-let inc_ids = await queryIncidents('state:"closed"','start|desc');
+let inc_ids = await queryIncidents(`state:"${args.status??'open'}"`,'start|desc');
+if (!inc_ids||inc_ids.length==0){ console.log(`[+] no incidents retrieved`);process.exit(0);}
+
 let incidents=await getIncidents(inc_ids)
 let ib_ids=await queryIncidentBehaviors(`${incidents.map(i=>`incident_ids:"${i.incident_id}"`).join(',')} `)
 let ibs=await getIncidentBehaviors(ib_ids)
@@ -245,8 +258,6 @@ incidents.forEach(incident=>{
     incident.behaviors=[];
     ibs.forEach(ib=>{ if ( ib.incident_ids.indexOf(incident.incident_id)!=-1){ incident.behaviors.push(ib); } })
 });
-
-//console.log(JSON.stringify(incidents))
 
 const s_inc=incidents.map(summarizeJSON);
 
@@ -262,5 +273,9 @@ for (let i=0;i<s_inc.length;i++){
         return { ioc_value: "", ioc_description: "", ioc_tlp_id: 1, ioc_type_id: 2, ioc_tags: "", ioc_enrichment: {}};
     });
     console.log(`[+] pushing alert for incident (${_title})`)
-    //await sendAlertToIris(_title, _text, _source, { date:_date, severity:'medium', assets:_assets});
+    if (!args.dryRun){ 
+        await sendAlertToIris(_title, _text, _SOURCE, { date:_date, severity:'medium', assets:_assets ,tags:_TAGS});
+    } else{
+        console.log(`[-] incident raw data:`,s_inc[i])        
+    }
 }
